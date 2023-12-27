@@ -1,5 +1,6 @@
 import { inject, reactive, ref, watch, unref, Ref } from 'vue';
 import { useMessage } from '/@/hooks/web/useMessage';
+import { isEmpty } from '@/utils/is';
 
 export function useSelectBiz(getList, props) {
   //接收下拉框选项
@@ -25,7 +26,10 @@ export function useSelectBiz(getList, props) {
   watch(
     selectValues,
     () => {
-      if (selectValues['change'] == false) {
+      //update-begin-author:liusq---date:2023-10-19--for: [issues/788]判断有设置数值才去加载
+      //if (selectValues['change'] == false && !isEmpty(selectValues['value'])) {
+      if (selectValues['change'] == false && !isEmpty(selectValues['value'])) {
+        //update-end-author:liusq---date:2023-10-19--for: [issues/788]判断有设置数值才去加载
         //update-begin---author:wangshuai ---date:20220412  for：[VUEN-672]发文草稿箱编辑时拟稿人显示用户名------------
         let params = {};
         params[props.rowKey] = selectValues['value'].join(',');
@@ -79,7 +83,7 @@ export function useSelectBiz(getList, props) {
    */
   const indexColumnProps = {
     dataIndex: 'index',
-    width: 20,
+    width: 50,
   };
 
   /**
@@ -138,8 +142,10 @@ export function useSelectBiz(getList, props) {
   }
   //删除已选择的信息
   function handleDeleteSelected(record) {
-    checkedKeys.value = checkedKeys.value.splice(checkedKeys.value.indexOf(record['id']), 1);
-    selectRows.value = selectRows.value.filter((item) => item['id'] !== record['id']);
+    //update-begin---author:wangshuai ---date:20230404  for：【issues/424】开启右侧列表后，在右侧列表中删除用户时，逻辑有问题------------
+    checkedKeys.value = checkedKeys.value.filter((item) => item != record[props.rowKey]);
+    selectRows.value = selectRows.value.filter((item) => item[props.rowKey] !== record[props.rowKey]);
+    //update-end---author:wangshuai ---date:20230404  for：【issues/424】开启右侧列表后，在右侧列表中删除用户时，逻辑有问题------------
   }
   //清空选择项
   function reset() {

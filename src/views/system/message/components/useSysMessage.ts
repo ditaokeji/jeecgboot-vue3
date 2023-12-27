@@ -4,6 +4,8 @@ import { getDictItemsByCode } from '/@/utils/dict/index';
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '/@/store/modules/app';
 import { useTabs } from '/@/hooks/web/useTabs';
+import { useModal } from '/@/components/Modal';
+import {useMessage} from "/@/hooks/web/useMessage";
 
 /**
  * 列表接口
@@ -18,6 +20,7 @@ const queryMessageList = (params) => {
  * 获取消息列表数据
  */
 export function useSysMessage() {
+  const { createMessage } = useMessage();
   const rangeDateArray = getDictItemsByCode('rangeDate');
   console.log('+++++++++++++++++++++');
   console.log('rangeDateArray', rangeDateArray);
@@ -85,7 +88,7 @@ export function useSysMessage() {
   }
   
   //标星
-  function updateStarMessage(item){
+  async function updateStarMessage(item){
     const url = '/sys/sysAnnouncementSend/edit';
     let starFlag = '1';
     if(item.starFlag==starFlag){
@@ -95,7 +98,13 @@ export function useSysMessage() {
       starFlag,
       id: item.sendId
     }
-    defHttp.put({url, params});
+    //update-begin-author:taoyan date:2023-3-6 for: QQYUN-4491【应用】一些小问题  4、标星不需要提示吧
+    const data:any = await defHttp.put({url, params}, {isTransformResponse: false});
+    if(data.success === true){
+    }else{
+      createMessage.warning(data.message)
+    }
+    //update-end-author:taoyan date:2023-3-6 for: QQYUN-4491【应用】一些小问题  4、标星不需要提示吧
   }
 
 
@@ -119,6 +128,8 @@ export function useSysMessage() {
       return '邮件提醒:';
     } else if(item.busType=='bpm'){
       return '流程催办:';
+    } else if(item.busType=='bpm_cc'){
+      return '流程抄送:';
     }else if(item.busType=='bpm_task'){
       return '流程任务:';
     } else if (item.msgCategory == '2') {
@@ -147,7 +158,7 @@ export function useSysMessage() {
 /**
  * 用于消息跳转
  */
-export function useMessageHref(emit){
+export function useMessageHref(emit, props){
   const messageHrefArray:any[] = getDictItemsByCode('messageHref');
   const router = useRouter();
   const appStore = useAppStore();
@@ -157,7 +168,7 @@ export function useMessageHref(emit){
   //const bpmPath = '/task/handle/'
   
   async function goPage(record, openModalFun?){
-    if(!record.busType){
+    if(!record.busType || record.busType == 'msg_node'){
       if(!openModalFun){
         // 从首页的消息通知跳转
         await goPageFromOuter(record);
@@ -188,7 +199,7 @@ export function useMessageHref(emit){
     let path = temp[0].text;
     path = path.replace('{DETAIL_ID}', busId)
     //固定参数 detailId 用于查询表单数据
-    let query = {
+    let query:any = {
       detailId: busId
     };
     // 额外参数处理

@@ -35,6 +35,7 @@
       v-model:value="state"
       :filterOption="handleFilterOption"
       :getPopupContainer="getPopupContainer"
+      :style="style"
       @change="handleChange"
     >
       <a-select-option v-if="showChooseOption" :value="null">请选择…</a-select-option>
@@ -80,8 +81,9 @@
         default: [],
         required: false,
       },
+      style: propTypes.any,
     },
-    emits: ['options-change', 'change'],
+    emits: ['options-change', 'change','update:value'],
     setup(props, { emit, refs }) {
       const dictOptions = ref<any[]>([]);
       const attrs = useAttrs();
@@ -146,39 +148,52 @@
 
       function handleChange(e) {
         const { mode } = unref<Recordable>(getBindValue);
+        let changeValue:any;
         // 兼容多选模式
+        
+        //update-begin---author:wangshuai ---date:20230216  for：[QQYUN-4290]公文发文：选择机关代字报错,是因为值改变触发了change事件三次，导致数据发生改变------------
+        //采用一个值，不然的话state值变换触发多个change
         if (mode === 'multiple') {
-          state.value = e?.target?.value ?? e;
+          changeValue = e?.target?.value ?? e;
+          // 过滤掉空值
+          if (changeValue == null || changeValue === '') {
+            changeValue = [];
+          }
+          if (Array.isArray(changeValue)) {
+            changeValue = changeValue.filter((item) => item != null && item !== '');
+          }
         } else {
-          state.value = [e?.target?.value ?? e];
+          changeValue = e?.target?.value ?? e;
         }
-        // 过滤掉空值
-        if (state.value == null || state.value === '') {
-          state.value = [];
-        }
-        if (Array.isArray(state.value)) {
-          state.value = state.value.filter((item) => item != null && item !== '');
-        }
-        //update-begin---author:wangshuai ---date:20221123  for：单选模式要改成字符串------------
-        if(mode !== 'multiple' && state.value && state.value.length>0){
-          state.value = state.value[0];
-        }
-        //update-end---author:wangshuai ---date:20221123  for：单选模式要改成字符串--------------
+        state.value = changeValue;
+
+        //update-begin---author:wangshuai ---date:20230403  for：【issues/4507】JDictSelectTag组件使用时，浏览器给出警告提示：Expected Function, got Array------------
+        emit('update:value',changeValue)
+        //update-end---author:wangshuai ---date:20230403  for：【issues/4507】JDictSelectTag组件使用时，浏览器给出警告提示：Expected Function, got Array述------------
+        //update-end---author:wangshuai ---date:20230216  for：[QQYUN-4290]公文发文：选择机关代字报错,是因为值改变触发了change事件三次，导致数据发生改变------------
+        
         // nextTick(() => formItemContext.onFieldChange());
       }
 
       /** 单选radio的值变化事件 */
       function handleChangeRadio(e) {
         state.value = e?.target?.value ?? e;
+        //update-begin---author:wangshuai ---date:20230504  for：【issues/506】JDictSelectTag 组件 type="radio" 没有返回值------------
+        emit('update:value',e?.target?.value ?? e)
+        //update-end---author:wangshuai ---date:20230504  for：【issues/506】JDictSelectTag 组件 type="radio" 没有返回值------------
       }
 
       /** 用于搜索下拉框中的内容 */
       function handleFilterOption(input, option) {
-        // 在 label 中搜索
-        let labelIf = option.children()[0]?.children.toLowerCase().indexOf(input.toLowerCase()) >= 0;
-        if (labelIf) {
-          return true;
+        // update-begin--author:liaozhiyang---date:20230914---for：【QQYUN-6514】 配置的时候，Y轴不能输入多个字段了，控制台报错
+        if (typeof option.children === 'function') {
+          // 在 label 中搜索
+          let labelIf = option.children()[0]?.children.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+          if (labelIf) {
+            return true;
+          }
         }
+        // update-end--author:liaozhiyang---date:20230914---for：【QQYUN-6514】 配置的时候，Y轴不能输入多个字段了，控制台报错
         // 在 value 中搜索
         return (option.value || '').toString().toLowerCase().indexOf(input.toLowerCase()) >= 0;
       }

@@ -13,7 +13,7 @@
     name: 'JVxeInputCell',
     props: useJVxeCompProps(),
     setup(props: JVxeComponent.Props) {
-      const { innerValue, cellProps, handleChangeCommon } = useJVxeComponent(props);
+      const { innerValue, cellProps, handleChangeCommon, handleBlurCommon } = useJVxeComponent(props);
 
       /** 处理change事件 */
       function handleChange(event) {
@@ -48,9 +48,9 @@
           } else {
             target.value = Number.parseFloat(target.value);
           }
-          handleChangeCommon(target.value);
         }
-        handleChangeCommon(target.value);
+        handleChangeCommon(target.value, true);
+        handleBlurCommon(target.value);
       }
 
       return {

@@ -79,6 +79,9 @@ export const searchFormSchema: FormSchema[] = [
     field: 'name',
     label: '姓名',
     component: 'Input',
+    componentProps: {
+      trim: true,
+    },
     colProps: { span: 8 },
   },
   {
@@ -210,5 +213,11 @@ export const formSchema: FormSchema[] = [
     componentProps: {
       placeholder: '请输入个人简介',
     },
+  },
+  {
+    field: 'updateCount',
+    label: '乐观锁',
+    show: false,
+    component: 'Input',
   },
 ];

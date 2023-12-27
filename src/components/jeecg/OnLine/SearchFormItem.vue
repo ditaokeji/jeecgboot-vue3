@@ -131,8 +131,7 @@
     <template #label>
       <span :title="item.label" class="label-text">{{ item.label }}</span>
     </template>
-    <JOnlineSearchSelect v-model:value="queryParam[item.field]" :placeholder="'请选择' + item.label" :sql="item.sql">
-  </JOnlineSearchSelect>
+    <JOnlineSearchSelect v-model:value="queryParam[item.field]" :placeholder="'请选择'+item.label" :fieldId="item.fieldId"/>
   </a-form-item>
 
   <a-form-item v-else-if="item.view === CompTypeEnum.SelUser" :labelCol="labelCol" :class="'jeecg-online-search'">
@@ -215,7 +214,7 @@
   import { CompTypeEnum } from '/@/enums/CompTypeEnum.ts';
   import { JDictSelectTag, JTreeSelect, JCategorySelect, JSelectUserByDept, JSelectDept, JPopup, JAreaLinkage,JInput,JSearchSelect } from '/@/components/Form';
   export default defineComponent({
-    name: 'JPopupOnlReport',
+    name: 'SearchFormItem',
     components: {
       //JOnlineSearchSelect
       JDictSelectTag,

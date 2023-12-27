@@ -1,5 +1,5 @@
 import type { FormProps, FormActionType, UseFormReturnType, FormSchema } from '../types/form';
-import type { NamePath } from 'ant-design-vue/lib/form/interface';
+import type { NamePath, ValidateOptions } from 'ant-design-vue/lib/form/interface';
 import type { DynamicProps } from '/#/utils';
 import { handleRangeValue } from '../utils/formUtils';
 import { ref, onUnmounted, unref, nextTick, watch } from 'vue';
@@ -10,7 +10,7 @@ import { add } from "/@/components/Form/src/componentMap";
 //集成online专用控件
 import { OnlineSelectCascade, LinkTableCard, LinkTableSelect } from  '@jeecg/online';
 
-export declare type ValidateFields = (nameList?: NamePath[]) => Promise<Recordable>;
+export declare type ValidateFields = (nameList?: NamePath[], options?: ValidateOptions) => Promise<Recordable>;
 
 type Props = Partial<DynamicProps<FormProps>>;
 
@@ -97,7 +97,12 @@ export function useForm(props?: Props): UseFormReturnType {
       if(values){
         Object.keys(values).map(key=>{
           if (values[key] instanceof Array) {
-            values[key] = values[key].join(',');
+            // update-begin-author:sunjianlei date:20221205 for: 【issues/4330】判断如果是对象数组，则不拼接
+            let isObject = typeof (values[key][0] || '') === 'object';
+            if (!isObject) {
+              values[key] = values[key].join(',');
+            }
+            // update-end-author:sunjianlei date:20221205 for: 【issues/4330】判断如果是对象数组，则不拼接
           }
         });
       }
@@ -144,9 +149,9 @@ export function useForm(props?: Props): UseFormReturnType {
       });
       return values;
     },
-    validateFields: async (nameList?: NamePath[]): Promise<Recordable> => {
+    validateFields: async (nameList?: NamePath[], options?: ValidateOptions): Promise<Recordable> => {
       const form = await getForm();
-      return form.validateFields(nameList);
+      return form.validateFields(nameList, options);
     },
   };
 

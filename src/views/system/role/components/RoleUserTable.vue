@@ -2,7 +2,7 @@
   <BasicDrawer @register="registerBaseDrawer" title="角色用户" width="800" destroyOnClose>
     <BasicTable @register="registerTable" :rowSelection="rowSelection">
       <template #tableTitle>
-        <a-button type="primary" @click="handleCreate"> 新增用户</a-button>
+        <a-button type="primary" @click="handleCreate" v-if="!disableUserEdit"> 新增用户</a-button>
         <a-button type="primary" @click="handleSelect"> 已有用户</a-button>
 
         <a-dropdown v-if="checkedKeys.length > 0">
@@ -31,7 +31,7 @@
   </BasicDrawer>
 </template>
 <script lang="ts" setup>
-  import { ref, defineProps, watch, unref } from 'vue';
+  import { ref, watch, unref } from 'vue';
   import { BasicTable, useTable, TableAction } from '/src/components/Table';
   import { BasicDrawer, useDrawer, useDrawerInner } from '/src/components/Drawer';
   import { useModal } from '/src/components/Modal';
@@ -42,6 +42,10 @@
   import { getUserRoles } from '../../user/user.api';
 
   const emit = defineEmits(['register', 'hideUserList']);
+  const props = defineProps({
+    disableUserEdit: {type:Boolean,default:false}
+  })
+  
   const checkedKeys = ref<Array<string | number>>([]);
   const roleId = ref('');
   const [registerBaseDrawer, { setDrawerProps, closeDrawer }] = useDrawerInner(async (data) => {
@@ -58,10 +62,11 @@
     api: userList,
     columns: userColumns,
     formConfig: {
-      labelWidth: 120,
+      //update-begin---author:wangshuai ---date:20230703  for：【QQYUN-5685】3、租户角色下,查询居左显示
+      labelWidth: 60,
+      //update-end---author:wangshuai ---date:20230703  for：【QQYUN-5685】3、租户角色下,查询居左显示
       schemas: searchUserFormSchema,
       autoSubmitOnEnter: true,
-      actionColOptions: { pull: 1 },
     },
     striped: true,
     useSearchForm: true,
@@ -167,6 +172,7 @@
       {
         label: '编辑',
         onClick: handleEdit.bind(null, record),
+        ifShow: () => !props.disableUserEdit,
       },
       {
         label: '取消关联',
@@ -178,3 +184,11 @@
     ];
   }
 </script>
+
+<style scoped>
+  /*update-begin---author:wangshuai ---date:20230703  for：【QQYUN-5685】3、租户角色下,查询居左显示*/
+  :deep(.ant-form-item-control-input-content){
+    text-align: left;
+  }
+  /*update-end---author:wangshuai ---date:20230703  for：【QQYUN-5685】3、租户角色下,查询居左显示*/
+</style>

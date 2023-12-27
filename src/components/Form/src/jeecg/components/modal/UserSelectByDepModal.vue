@@ -76,22 +76,22 @@
           {
             title: '用户账号',
             dataIndex: 'username',
-            width: 50,
+            width: 180,
           },
           {
             title: '用户姓名',
             dataIndex: 'realname',
-            width: 50,
+            width: 180,
           },
           {
             title: '性别',
             dataIndex: 'sex_dictText',
-            width: 50,
+            width: 80,
           },
           {
             title: '手机号码',
             dataIndex: 'phone',
-            width: 50,
+            // width: 50,
           },
         ],
         useSearchForm: true,
@@ -110,6 +110,16 @@
             xl: 6,
             xxl: 10,
           },
+          //update-begin-author:liusq date:2023-10-30 for: [issues/5514]组件页面显示错位
+          actionColOptions: {
+              xs: 24,
+              sm: 12,
+              md: 12,
+              lg: 12,
+              xl: 8,
+              xxl: 8,
+          },
+          //update-end-author:liusq date:2023-10-30 for: [issues/5514]组件页面显示错位
           schemas: [
             {
               label: '账号',

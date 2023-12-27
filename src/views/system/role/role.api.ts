@@ -3,6 +3,7 @@ import { Modal } from 'ant-design-vue';
 
 enum Api {
   list = '/sys/role/list',
+  listByTenant = '/sys/role/listByTenant',
   save = '/sys/role/add',
   edit = '/sys/role/edit',
   deleteRole = '/sys/role/delete',
@@ -34,10 +35,15 @@ export const getExportUrl = Api.exportXls;
  */
 export const getImportUrl = Api.importExcel;
 /**
- * 列表
+ * 系统角色列表
  * @param params
  */
 export const list = (params) => defHttp.get({ url: Api.list, params });
+/**
+ * 租户角色列表
+ * @param params
+ */
+export const listByTenant = (params) => defHttp.get({ url: Api.listByTenant, params });
 
 /**
  * 删除角色
@@ -76,7 +82,24 @@ export const saveOrUpdateRole = (params, isUpdate) => {
  * 编码校验
  * @param params
  */
-export const isRoleExist = (params) => defHttp.get({ url: Api.isRoleExist, params }, { isTransformResponse: false });
+// update-begin--author:liaozhiyang---date:20231215---for：【QQYUN-7415】表单调用接口进行校验的添加防抖
+let timer;
+export const isRoleExist = (params) => {
+  return new Promise((resolve, rejected) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      defHttp
+        .get({ url: Api.isRoleExist, params }, { isTransformResponse: false })
+        .then((res) => {
+          resolve(res);
+        })
+        .catch((error) => {
+          rejected(error);
+        });
+    }, 500);
+  });
+};
+// update-end--author:liaozhiyang---date:20231215---for：【QQYUN-7415】表单调用接口进行校验的添加防抖
 /**
  * 根据角色查询树信息
  */

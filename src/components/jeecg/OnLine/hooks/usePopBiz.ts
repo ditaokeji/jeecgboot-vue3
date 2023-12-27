@@ -1,15 +1,27 @@
-import { reactive, ref, unref, defineAsyncComponent, toRaw, markRaw } from 'vue';
+import { reactive, ref, unref, defineAsyncComponent, toRaw, markRaw, isRef, watch, onUnmounted } from 'vue';
 import { httpGroupRequest } from '/@/components/Form/src/utils/GroupRequest';
 import { defHttp } from '/@/utils/http/axios';
 import { filterMultiDictText } from '/@/utils/dict/JDictSelectUtil.js';
 import { useMessage } from '/@/hooks/web/useMessage';
 import { OnlineColumn } from '/@/components/jeecg/OnLine/types/onlineConfig';
 import { h } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useMethods } from '/@/hooks/system/useMethods';
-import { importViewsFile } from '/@/utils';
+import { importViewsFile, _eval } from '/@/utils';
 
-export function usePopBiz(props, tableRef?) {
+export function usePopBiz(ob, tableRef?) {
+  // update-begin--author:liaozhiyang---date:20230811---for：【issues/675】子表字段Popup弹框数据不更新
+  let props: any;
+  if (isRef(ob)) {
+    props = ob.value;
+    const stopWatch = watch(ob, (newVal) => {
+      props = newVal;
+    });
+    onUnmounted(() => stopWatch());
+  } else {
+    props = ob;
+  }
+  // update-end--author:liaozhiyang---date:20230811---for：【issues/675】子表字段Popup弹框数据不更新
   const { createMessage } = useMessage();
   //弹窗可视状态
   const visible = ref(false);
@@ -33,6 +45,8 @@ export function usePopBiz(props, tableRef?) {
   const dataSource = ref<Array<object>>([]);
   //定义表格信息
   const columns = ref<Array<object>>([]);
+  // 当前路由
+  const route = useRoute();
   //定义请求url信息
   const configUrl = reactive({
     //列表页加载column和data
@@ -97,21 +111,36 @@ export function usePopBiz(props, tableRef?) {
    * @param selectRow
    */
   function onSelectChange(selectedRowKeys: (string | number)[]) {
+    // update-begin--author:liaozhiyang---date:20230919---for：【QQYUN-4263】跨页选择导出问题
     if (!selectedRowKeys || selectedRowKeys.length == 0) {
       selectRows.value = [];
+      checkedKeys.value = [];
     } else {
-      for (let i = 0; i < selectedRowKeys.length; i++) {
-        let combineKey = combineRowKey(getRowByKey(selectedRowKeys[i]));
-        let keys = unref(checkedKeys);
-        if (combineKey && keys.indexOf(combineKey) < 0) {
-          let row = getRowByKey(selectedRowKeys[i]);
-          row && selectRows.value.push(row);
-        }
+      if (selectRows.value.length > selectedRowKeys.length) {
+        // 取消
+        selectRows.value.forEach((item, index) => {
+          const rowKey = combineRowKey(item);
+          if (!selectedRowKeys.find((key) => key === rowKey)) {
+            selectRows.value.splice(index, 1);
+          }
+        });
+      } else {
+        // 新增
+        const append: any = [];
+        const beforeRowKeys = selectRows.value.map((item) => combineRowKey(item));
+        selectedRowKeys.forEach((key) => {
+          if (!beforeRowKeys.find((item) => item === key)) {
+            // 那就是新增选中的行
+            const row = getRowByKey(key);
+            row && append.push(row);
+          }
+        });
+        selectRows.value = [...selectRows.value, ...append];
       }
+      checkedKeys.value = [...selectedRowKeys];
     }
-    checkedKeys.value = selectedRowKeys;
+    // update-end--author:liaozhiyang---date:20230919---for：【QQYUN-4263】跨页选择导出问题
   }
-
   /**
    * 过滤没用选项
    * @param selectedRowKeys
@@ -421,7 +450,9 @@ export function usePopBiz(props, tableRef?) {
       if (jsPattern.test(href)) {
         href = href.replace(jsPattern, function (text, s0) {
           try {
-            return eval(s0);
+            // update-begin--author:liaozhiyang---date:20230904---for：【QQYUN-6390】eval替换成new Function，解决build警告
+            return _eval(s0);
+            // update-end--author:liaozhiyang---date:20230904---for：【QQYUN-6390】eval替换成new Function，解决build警告
           } catch (e) {
             console.error(e);
             return text;
@@ -450,7 +481,7 @@ export function usePopBiz(props, tableRef?) {
     let keys = unref(checkedKeys);
     if (keys.length > 0) {
       params['force_id'] = keys
-        .map((i) => (getRowByKey(i) as any)?.id)
+        .map((i) => selectRows.value.find((item) => combineRowKey(item) === i)?.id)
         .filter((i) => i != null && i !== '')
         .join(',');
     }
@@ -533,6 +564,7 @@ export function usePopBiz(props, tableRef?) {
       pagination.current = 1;
     }
     let params = getQueryParams(); //查询条件
+    params['onlRepUrlParamStr'] = getUrlParamString();
     console.log('params', params);
     loading.value = true;
     let url = `${configUrl.getData}${unref(cgRpConfigId)}`;
@@ -544,6 +576,20 @@ export function usePopBiz(props, tableRef?) {
       console.log('表格信息:', data);
       setDataSource(data);
     });
+  }
+
+  /**
+   * 获取地址栏的参数
+   */
+  function getUrlParamString() {
+   let query = route.query;
+   let arr:any[] = []
+   if(query && Object.keys(query).length>0){
+     Object.keys(query).map(k=>{
+       arr.push(`${k}=${query[k]}`)
+     })
+   }
+   return arr.join('&')
   }
 
   /**
@@ -559,6 +605,13 @@ export function usePopBiz(props, tableRef?) {
         }
       }
       dataSource.value = data.records;
+      //update-begin-author:taoyan date:2023-2-11 for:issues/356 在线报表分页有问题
+      //update-begin-author:liusq date:2023-4-04 for:issues/426 修复356时候引入的回归错误 JPopupOnlReportModal.vue 中未修改
+      tableRef?.value && tableRef?.value?.setPagination({
+        total: Number(data.total)
+      })
+      //update-end-author:liusq date:2023-4-04  for:issues/426 修复356时候引入的回归错误 JPopupOnlReportModal.vue 中未修改
+      //update-end-author:taoyan date:2023-2-11 for:issues/356 在线报表分页有问题
     } else {
       pagination.total = 0;
       dataSource.value = [];
@@ -661,19 +714,22 @@ export function usePopBiz(props, tableRef?) {
         arr1.push(record);
         arr2.push(rowKey);
         checkedKeys.value = arr2;
-        selectRows.value = arr1;
+        //selectRows.value = arr1;
       } else {
         if (unref(checkedKeys).indexOf(rowKey) < 0) {
           //不存在就选中
           checkedKeys.value.push(rowKey);
-          selectRows.value.push(record);
+          //selectRows.value.push(record);
         } else {
           //已选中就取消
           let rowKey_index = unref(checkedKeys).indexOf(rowKey);
           checkedKeys.value.splice(rowKey_index, 1);
-          selectRows.value.splice(rowKey_index, 1);
+          //selectRows.value.splice(rowKey_index, 1);
         }
       }
+      // update-begin--author:liaozhiyang---date:20230914---for：【issues/5357】点击行选中
+      tableRef.value.setSelectedRowKeys([...checkedKeys.value]);
+      // update-end--author:liaozhiyang---date:20230914---for：【issues/5357】点击行选中
     }
   }
 

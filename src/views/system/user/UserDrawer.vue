@@ -16,8 +16,10 @@
   import { BasicForm, useForm } from '/@/components/Form/index';
   import { formSchema } from './user.data';
   import { BasicDrawer, useDrawerInner } from '/@/components/Drawer';
-  import { saveOrUpdateUser, getUserRoles, getUserDepartList } from './user.api';
+  import { saveOrUpdateUser, getUserRoles, getUserDepartList, getAllRolesListNoByTenant, getAllRolesList } from './user.api';
   import { useDrawerAdaptiveWidth } from '/@/hooks/jeecg/useAdaptiveWidth';
+  import { getTenantId } from "/@/utils/auth";
+
   // 声明Emits
   const emit = defineEmits(['success', 'register']);
   const attrs = useAttrs();
@@ -69,7 +71,9 @@
       //负责部门/赋值
       data.record.departIds && !Array.isArray(data.record.departIds) && (data.record.departIds = data.record.departIds.split(','));
       //update-begin---author:zyf   Date:20211210  for：避免空值显示异常------------
-      data.record.departIds = data.record.departIds == '' ? [] : data.record.departIds;
+      //update-begin---author:liusq   Date:20231008  for：[issues/772]避免空值显示异常------------
+      data.record.departIds =  (!data.record.departIds || data.record.departIds == '') ? [] : data.record.departIds;
+      //update-end-----author:liusq   Date:20231008  for：[issues/772]避免空值显示异常------------
       //update-begin---author:zyf   Date:20211210  for：避免空值显示异常------------
     }
     //处理角色用户列表情况(和角色列表有关系)
@@ -99,8 +103,27 @@
       {
         field: 'selectedroles',
         show: !data?.departDisabled ?? false,
+        //update-begin---author:wangshuai ---date:20230424  for：【issues/4844】多租户模式下，新增或编辑用户，选择角色一栏，角色选项没有做租户隔离------------
+        //判断是否为多租户模式
+        componentProps:{
+          api: data.tenantSaas?getAllRolesList:getAllRolesListNoByTenant
+        }
+        //update-end---author:wangshuai ---date:20230424  for：【issues/4844】多租户模式下，新增或编辑用户，选择角色一栏，角色选项没有做租户隔离------------
       },
+      //update-begin---author:wangshuai ---date:20230522  for：【issues/4935】租户用户编辑界面中租户下拉框未过滤，显示当前系统所有的租户------------
+      {
+        field: 'relTenantIds',
+        componentProps:{
+          disabled: !!data.tenantSaas,
+        },
+      },
+      //update-end---author:wangshuai ---date:20230522  for：【issues/4935】租户用户编辑界面中租户下拉框未过滤，显示当前系统所有的租户------------
     ]);
+    //update-begin---author:wangshuai ---date:20230522  for：【issues/4935】租户用户编辑界面中租户下拉框未过滤，显示当前系统所有的租户------------
+    if(!unref(isUpdate) && data.tenantSaas){
+      await setFieldsValue({ relTenantIds: getTenantId().toString() })
+    }
+    //update-end---author:wangshuai ---date:20230522  for：【issues/4935】租户用户编辑界面中租户下拉框未过滤，显示当前系统所有的租户------------
     // 无论新增还是编辑，都可以设置表单值
     if (typeof data.record === 'object') {
       setFieldsValue({

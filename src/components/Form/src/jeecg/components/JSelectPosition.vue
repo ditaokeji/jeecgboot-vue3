@@ -30,14 +30,14 @@
       },
       rowKey: {
         type: String,
-        default: 'code',
+        default: 'id',
       },
       params: {
         type: Object,
         default: () => {},
       },
     },
-    emits: ['options-change', 'change'],
+    emits: ['options-change', 'change', 'update:value'],
     setup(props, { emit, refs }) {
       const emitData = ref<any[]>();
       //注册model
@@ -108,6 +108,10 @@
         //emitData.value = values.join(",");
         state.value = values;
         selectValues.value = values;
+        //update-begin-author:liusq date:20230517 for:选择职务组件v-model方式绑定值不生效
+        emit('update:value', values.join(','));
+        //update-begin-author:liusq date:20230517 for:选择职务组件v-model方式绑定值不生效
+
       }
 
       const getBindValue = Object.assign({}, unref(props), unref(attrs));

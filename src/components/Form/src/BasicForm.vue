@@ -11,6 +11,7 @@
           :allDefaultValues="defaultValueRef"
           :formModel="formModel"
           :setFormModel="setFormModel"
+          :validateFields="validateFields"
         >
           <template #[item]="data" v-for="item in Object.keys($slots)">
             <slot :name="item" v-bind="data || {}"></slot>
@@ -51,8 +52,11 @@
   import { useModalContext } from '/@/components/Modal';
 
   import { basicProps } from './props';
+  import componentSetting from '/@/settings/componentSetting';
+
   import { useDesign } from '/@/hooks/web/useDesign';
   import dayjs from 'dayjs';
+  import { useDebounceFn } from '@vueuse/core';
 
   export default defineComponent({
     name: 'BasicForm',
@@ -87,6 +91,16 @@
           mergeProps.labelCol = undefined;
         }
         //update-end-author:sunjianlei date:20220923 for: 如果用户设置了labelWidth，则使labelCol失效，解决labelWidth设置无效的问题
+        // update-begin--author:liaozhiyang---date:20231017---for：【QQYUN-6566】BasicForm支持一行显示(inline)
+        if (mergeProps.layout === 'inline') {
+          if (mergeProps.labelCol === componentSetting.form.labelCol) {
+            mergeProps.labelCol = undefined;
+          }
+          if (mergeProps.wrapperCol === componentSetting.form.wrapperCol) {
+            mergeProps.wrapperCol = undefined;
+          }
+        }
+        // update-end--author:liaozhiyang---date:20231017---for：【QQYUN-6566】BasicForm支持一行显示(inline)
         return mergeProps;
       });
 
@@ -116,7 +130,15 @@
           const { defaultValue, component, componentProps } = schema;
           // handle date type
           if (defaultValue && dateItemType.includes(component)) {
-            const { valueFormat } = componentProps
+            //update-begin---author:wangshuai ---date:20230410  for：【issues/435】代码生成的日期控件赋默认值报错------------
+            let valueFormat:string = "";
+            if(componentProps){
+              valueFormat = componentProps?.valueFormat;
+            }
+            if(!valueFormat){
+              console.warn("未配置valueFormat,可能导致格式化错误！");
+            }
+            //update-end---author:wangshuai ---date:20230410  for：【issues/435】代码生成的日期控件赋默认值报错------------
             if (!Array.isArray(defaultValue)) {
               //update-begin---author:wangshuai ---date:20221124  for：[issues/215]列表页查询框（日期选择框）设置初始时间，一进入页面时，后台报日期转换类型错误的------------
               if(valueFormat){
@@ -239,13 +261,21 @@
         propsRef.value = deepMerge(unref(propsRef) || {}, formProps);
       }
 
+      //update-begin-author:taoyan date:2022-11-28 for: QQYUN-3121 【优化】表单视图问题#scott测试 8、此功能未实现
+      const onFormSubmitWhenChange = useDebounceFn(handleSubmit, 300);
       function setFormModel(key: string, value: any) {
         formModel[key] = value;
-        const { validateTrigger } = unref(getBindValue);
-        if (!validateTrigger || validateTrigger === 'change') {
-          validateFields([key]).catch((_) => {});
+        // update-begin--author:liaozhiyang---date:20230922---for：【issues/752】表单校验dynamicRules 无法 使用失去焦点后校验 trigger: 'blur'
+        // const { validateTrigger } = unref(getBindValue);
+        // if (!validateTrigger || validateTrigger === 'change') {
+        //   validateFields([key]).catch((_) => {});
+        // }
+        // update-end--author:liaozhiyang---date:20230922---for：【issues/752】表单校验dynamicRules 无法 使用失去焦点后校验 trigger: 'blur'
+        if(props.autoSearch === true){
+          onFormSubmitWhenChange();
         }
       }
+      //update-end-author:taoyan date:2022-11-28 for: QQYUN-3121 【优化】表单视图问题#scott测试 8、此功能未实现
 
       function handleEnterPress(e: KeyboardEvent) {
         const { autoSubmitOnEnter } = unref(getProps);
@@ -362,5 +392,12 @@
         margin-bottom: 8px !important;
       }
     }
+    // update-begin--author:liaozhiyang---date:20231017---for：【QQYUN-6566】BasicForm支持一行显示(inline)
+    &.ant-form-inline {
+      & > .ant-row {
+        .ant-col { width:auto !important; }
+      }
+    }
+    // update-end--author:liaozhiyang---date:20231017---for：【QQYUN-6566】BasicForm支持一行显示(inline)
   }
 </style>

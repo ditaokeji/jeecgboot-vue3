@@ -13,6 +13,7 @@
     v-bind="attrs"
     @change="onChange"
     @search="onSearch"
+    :tree-checkable="treeCheckAble"
   >
   </a-tree-select>
 </template>
@@ -50,8 +51,12 @@
     reload: propTypes.number.def(1),
     //update-begin-author:taoyan date:2022-11-8 for: issues/4173 Online JTreeSelect控件changeOptions方法未生效
     url: propTypes.string.def(''),
-    params: propTypes.object.def({})
+    params: propTypes.object.def({}),
     //update-end-author:taoyan date:2022-11-8 for: issues/4173 Online JTreeSelect控件changeOptions方法未生效
+    //update-begin---author:wangshuai date: 20230202 for: 新增是否有复选框
+    //默认没有选择框
+    treeCheckAble: propTypes.bool.def(false),
+    //update-end---author:wangshuai date: 20230202 for: 新增是否有复选框
   });
   const attrs = useAttrs();
   const emit = defineEmits(['change', 'update:value']);
@@ -104,7 +109,7 @@
       if(props.multiple){
         treeValue.value = [];
       }else{
-        treeValue.value = null;
+        treeValue.value = { label: null, value: null };
       }
     } else {
       //update-begin-author:taoyan date:2022-11-8 for: issues/4173 Online JTreeSelect控件changeOptions方法未生效
@@ -114,12 +119,18 @@
         let params = { key: props.value };
         let result = await defHttp.get({ url: `${Api.view}${props.dict}`, params }, { isTransformResponse: false });
         if (result.success) {
-          let values = props.value.split(',');
-          treeValue.value = result.result.map((item, index) => ({
-            key: values[index],
-            value: values[index],
-            label: item,
-          }));
+          //update-start-author:liaozhiyang date:2023-7-17 for:【issues/5141】使用JtreeSelect 组件 控制台报错
+          if(props.multiple){
+            let values = props.value.split(',');
+            treeValue.value = result.result.map((item, index) => ({
+              key: values[index],
+              value: values[index],
+              label: item,
+            }));
+          }else{
+            treeValue.value = { key: props.value, value: props.value, label: result.result[0] };
+          }
+          //update-end-author:liaozhiyang date:2023-7-17 for:【issues/5141】使用JtreeSelect 组件 控制台报错
           onLoadTriggleChange(result.result[0]);
         }
       }

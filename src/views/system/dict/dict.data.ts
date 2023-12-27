@@ -2,6 +2,8 @@ import { BasicColumn } from '/@/components/Table';
 import { FormSchema } from '/@/components/Table';
 import { dictItemCheck } from './dict.api';
 import { rules } from '/@/utils/helper/validator';
+import { h } from "vue";
+
 export const columns: BasicColumn[] = [
   {
     title: '字典名称',
@@ -9,7 +11,7 @@ export const columns: BasicColumn[] = [
     width: 240,
   },
   {
-    title: '字典编号',
+    title: '字典编码',
     dataIndex: 'dictCode',
     width: 240,
   },
@@ -27,7 +29,7 @@ export const recycleBincolumns: BasicColumn[] = [
     width: 120,
   },
   {
-    title: '字典编号',
+    title: '字典编码',
     dataIndex: 'dictCode',
     width: 120,
   },
@@ -92,6 +94,17 @@ export const dictItemColumns: BasicColumn[] = [
     title: '数据值',
     dataIndex: 'itemValue',
     width: 80,
+  },
+  {
+    title: '字典颜色',
+    dataIndex: 'itemColor',
+    width: 80,
+    align:'center',
+    customRender:({ text }) => {
+      return h('div', {
+        style: {"background": text, "width":"18px","height":"18px","border-radius":"50%","margin":"0 auto"}
+      })
+    }
   },
 ];
 
@@ -158,6 +171,12 @@ export const itemFormSchema: FormSchema[] = [
         },
       ];
     },
+  },
+  {
+    label: '颜色值',
+    field: 'itemColor',
+    component: 'Input',
+    slot:'itemColor'
   },
   {
     label: '描述',

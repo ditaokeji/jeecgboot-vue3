@@ -1,9 +1,5 @@
+import 'uno.css';
 import '/@/design/index.less';
-// 注册 windi
-import 'virtual:windi-base.css';
-import 'virtual:windi-components.css';
-import 'virtual:windi-utilities.css';
-import 'virtual:windi-devtools';
 // 注册图标
 import 'virtual:svg-icons-register';
 import App from './App.vue';
@@ -18,10 +14,12 @@ import { setupI18n } from '/@/locales/setupI18n';
 import { registerGlobComp } from '/@/components/registerGlobComp';
 import { registerThirdComp } from '/@/settings/registerThirdComp';
 import { useSso } from '/@/hooks/web/useSso';
+// 注册online模块lib
 import { registerPackages } from '/@/utils/monorepo/registerPackages';
 
 // 在本地开发中引入的,以提高浏览器响应速度
 if (import.meta.env.DEV) {
+  // @ts-ignore
   import('ant-design-vue/dist/antd.less');
 }
 async function bootstrap() {
@@ -37,7 +35,7 @@ async function bootstrap() {
   // 初始化内部系统配置
   initAppConfigStore();
 
-  // 注册外部模块路由
+  // 注册外部模块路由(注册online模块lib)
   registerPackages(app);
 
   // 注册全局组件
@@ -66,6 +64,8 @@ async function bootstrap() {
 
   // 挂载应用
   app.mount('#app', true);
+
+  console.log(" vue3 app 加载完成！")
 }
 
 bootstrap();

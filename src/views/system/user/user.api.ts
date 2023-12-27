@@ -2,6 +2,7 @@ import { defHttp } from '/@/utils/http/axios';
 import { Modal } from 'ant-design-vue';
 
 enum Api {
+  listNoCareTenant = '/sys/user/listAll',
   list = '/sys/user/list',
   save = '/sys/user/add',
   edit = '/sys/user/edit',
@@ -17,13 +18,18 @@ enum Api {
   putRecycleBin = '/sys/user/putRecycleBin',
   deleteRecycleBin = '/sys/user/deleteRecycleBin',
   allRolesList = '/sys/role/queryall',
+  allRolesListNoByTenant = '/sys/role/queryallNoByTenant',
   allTenantList = '/sys/tenant/queryList',
   allPostList = '/sys/position/list',
   userDepartList = '/sys/user/userDepartList',
   changePassword = '/sys/user/changePassword',
   frozenBatch = '/sys/user/frozenBatch',
   getUserAgent = '/sys/sysUserAgent/queryByUserName',
-  syncUser = '/act/process/extActProcess/doSyncUser',
+  userQuitAgent = '/sys/user/userQuitAgent',
+  getQuitList = '/sys/user/getQuitList',
+  putCancelQuit = '/sys/user/putCancelQuit',
+  updateUserTenantStatus='/sys/tenant/updateUserTenantStatus',
+  getUserTenantPageList='/sys/tenant/getUserTenantPageList',
 }
 /**
  * 导出api
@@ -35,10 +41,16 @@ export const getExportUrl = Api.exportXls;
  */
 export const getImportUrl = Api.importExcel;
 /**
- * 列表接口
+ * 列表接口(查询用户，通过租户隔离)
  * @param params
  */
 export const list = (params) => defHttp.get({ url: Api.list, params });
+
+/**
+ * 列表接口(查询全部用户，不通过租户隔离)
+ * @param params
+ */
+export const listNoCareTenant = (params) => defHttp.get({ url: Api.listNoCareTenant, params });
 
 /**
  * 用户角色接口
@@ -84,11 +96,39 @@ export const saveOrUpdateUser = (params, isUpdate) => {
  * @param params
  */
 export const duplicateCheck = (params) => defHttp.get({ url: Api.duplicateCheck, params }, { isTransformResponse: false });
+
 /**
- * 获取全部角色
+ * 20231215
+ * liaozhiyang
+ * 唯一校验（ 延迟【防抖】）
+ * @param params
+ */
+let timer;
+export const duplicateCheckDelay = (params) => {
+  return new Promise((resove, rejected) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      defHttp
+        .get({ url: Api.duplicateCheck, params }, { isTransformResponse: false })
+        .then((res: any) => {
+          resove(res as any);
+        })
+        .catch((error) => {
+          rejected(error);
+        });
+    }, 500);
+  });
+};
+/**
+ * 获取全部角色（租户隔离）
  * @param params
  */
 export const getAllRolesList = (params) => defHttp.get({ url: Api.allRolesList, params });
+/**
+ * 获取全部角色（不租户隔离）
+ * @param params
+ */
+export const getAllRolesListNoByTenant = (params) => defHttp.get({ url: Api.allRolesListNoByTenant, params });
 /**
  * 获取全部租户
  */
@@ -160,8 +200,44 @@ export const saveOrUpdateAgent = (params) => {
   return defHttp.post({ url: url, params });
 };
 
+
 /**
- * 用户同步流程
+ * 用户离职(新增代理人和用户状态变更操作)
  * @param params
  */
-export const syncUser = () => defHttp.put({ url: Api.syncUser });
+export const userQuitAgent = (params) => {
+  return defHttp.put({ url: Api.userQuitAgent, params });
+};
+
+/**
+ * 用户离职列表
+ * @param params
+ */
+export const getQuitList = (params) => {
+  return defHttp.get({ url: Api.getQuitList, params });
+};
+
+/**
+ * 取消离职
+ * @param params
+ */
+export const putCancelQuit = (params, handleSuccess) => {
+  return defHttp.put({ url: Api.putCancelQuit, params }, { joinParamsToUrl: true }).then(() => {
+    handleSuccess();
+  });
+};
+
+/**
+ * 待审批获取列表数据
+ */
+export const getUserTenantPageList = (params)=>{
+  return defHttp.get({url:Api.getUserTenantPageList,params})
+}
+
+/**
+ * 更新租户状态
+ * @param params
+ */
+export const updateUserTenantStatus = (params)=>{
+  return defHttp.put({ url: Api.updateUserTenantStatus, params }, { joinParamsToUrl: true,isTransformResponse: false });
+}

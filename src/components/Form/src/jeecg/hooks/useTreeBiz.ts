@@ -3,7 +3,7 @@ import { inject, reactive, ref, computed, unref, watch, nextTick } from 'vue';
 import { TreeActionType } from '/@/components/Tree';
 import { listToTree } from '/@/utils/common/compUtils';
 
-export function useTreeBiz(treeRef, getList, props) {
+export function useTreeBiz(treeRef, getList, props, realProps) {
   //接收下拉框选项
   const selectOptions = inject('selectOptions', ref<Array<object>>([]));
   //接收已选择的值
@@ -19,7 +19,7 @@ export function useTreeBiz(treeRef, getList, props) {
   //是否是打开弹框模式
   const openModal = ref(false);
   // 是否开启父子关联，如果不可以多选，就始终取消父子关联
-  const getCheckStrictly = computed(() => (props.multiple ? props.checkStrictly : true));
+  const getCheckStrictly = computed(() => (realProps.multiple ? props.checkStrictly : true));
   // 是否是首次加载回显，只有首次加载，才会显示 loading
   let isFirstLoadEcho = true;
 
@@ -29,6 +29,9 @@ export function useTreeBiz(treeRef, getList, props) {
   watch(
     selectValues,
     ({ value: values }: Recordable) => {
+      if(!values){
+        return;
+      }
       if (openModal.value == false && values.length > 0) {
         loadingEcho.value = isFirstLoadEcho;
         isFirstLoadEcho = false;
@@ -85,7 +88,7 @@ export function useTreeBiz(treeRef, getList, props) {
   function onCheck(keys, info) {
     if (props.checkable == true) {
       // 如果不能多选，就只保留最后一个选中的
-      if (!props.multiple) {
+      if (!realProps.multiple) {
         if (info.checked) {
           //update-begin-author:taoyan date:20220408 for: 单选模式下，设定rowKey，无法选中数据-
           checkedKeys.value = [info.node.eventKey];
@@ -112,8 +115,31 @@ export function useTreeBiz(treeRef, getList, props) {
   /**
    * 勾选全部
    */
-  function checkALL(checkAll) {
+  async function checkALL(checkAll) {
     getTree().checkAll(checkAll);
+    //update-begin---author:wangshuai ---date:20230403  for：【issues/394】所属部门树操作全部勾选不生效/【issues/4646】部门全部勾选后，点击确认按钮，部门信息丢失------------
+    await nextTick();
+    checkedKeys.value = getTree().getCheckedKeys();
+    if(checkAll){
+      getTreeRow();
+    }else{
+      selectRows.value = [];
+    }
+    //update-end---author:wangshuai ---date:20230403  for：【issues/394】所属部门树操作全部勾选不生效/【issues/4646】部门全部勾选后，点击确认按钮，部门信息丢失------------
+  }
+
+  /**
+   * 获取数列表
+   * @param res
+   */
+  function getTreeRow() {
+    let ids = "";
+    if(unref(checkedKeys).length>0){
+      ids = checkedKeys.value.join(",");
+    }
+    getList({ids:ids}).then((res) =>{
+      selectRows.value = res;
+    })
   }
 
   /**

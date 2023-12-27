@@ -17,7 +17,7 @@
           <div class="ant-upload-text">{{ text }}</div>
         </div>
       </template>
-      <a-button v-else-if="buttonVisible" :disabled="isMaxCount || disabled">
+      <a-button v-else-if="buttonVisible" :disabled="buttonDisabled">
         <Icon icon="ant-design:upload-outlined" />
         <span>{{ text }}</span>
       </a-button>
@@ -26,7 +26,7 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref, reactive, computed, watch, nextTick, createApp } from 'vue';
+  import { ref, reactive, computed, watch, nextTick, createApp,unref } from 'vue';
   import { Icon } from '/@/components/Icon';
   import { getToken } from '/@/utils/auth';
   import { uploadUrl } from '/@/api/common/api';
@@ -36,7 +36,7 @@
   import { useAttrs } from '/@/hooks/core/useAttrs';
   import { useDesign } from '/@/hooks/web/useDesign';
   import { UploadTypeEnum } from './upload.data';
-  import { getFileAccessHttpUrl } from '/@/utils/common/compUtils';
+  import { getFileAccessHttpUrl, getHeaders } from '/@/utils/common/compUtils';
   import UploadItemActions from './components/UploadItemActions.vue';
 
   const { createMessage, createConfirm } = useMessage();
@@ -67,11 +67,11 @@
     removeConfirm: propTypes.bool.def(false),
     beforeUpload: propTypes.func,
     disabled: propTypes.bool.def(false),
+    // 替换前一个文件，用于超出最大数量依然允许上传
+    replaceLastOne: propTypes.bool.def(false),
   });
 
-  const headers = reactive({
-    'X-Access-Token': getToken(),
-  });
+  const headers = getHeaders();
   const fileList = ref<any[]>([]);
   const uploadGoOn = ref<boolean>(true);
   // refs
@@ -80,9 +80,26 @@
   const isMaxCount = computed(() => props.maxCount > 0 && fileList.value.length >= props.maxCount);
   // 当前是否是上传图片模式
   const isImageMode = computed(() => props.fileType === UploadTypeEnum.image);
+  // 上传按钮是否禁用
+  const buttonDisabled = computed(()=>{
+    if(props.disabled === true){
+      return true;
+    }
+    if(isMaxCount.value === true){
+      if(props.replaceLastOne === true){
+        return false
+      }else{
+        return true;
+      }
+    }
+    return false
+  });
   // 合并 props 和 attrs
   const bindProps = computed(() => {
-    const bind: any = Object.assign({}, props, attrs);
+    //update-begin-author:liusq date:20220411 for: [issue/455]上传组件传入accept限制上传文件类型无效
+    const bind: any = Object.assign({}, props, unref(attrs));
+    //update-end-author:liusq date:20220411 for: [issue/455]上传组件传入accept限制上传文件类型无效
+
     bind.name = 'file';
     bind.listType = isImageMode.value ? 'picture-card' : 'text';
     bind.class = [bind.class, { 'upload-disabled': props.disabled }];
@@ -109,7 +126,13 @@
           parseArrayValue(val);
         }
       } else {
-        parsePathsValue(val);
+        //update-begin---author:liusq ---date:20230914  for：[issues/5327]Upload组件returnUrl为false时上传的字段值返回了一个'[object Object]' ------------
+        if (props.returnUrl) {
+          parsePathsValue(val);
+        } else {
+          val && parseArrayValue(JSON.parse(val));
+        }
+        //update-end---author:liusq ---date:20230914  for：[issues/5327]Upload组件returnUrl为false时上传的字段值返回了一个'[object Object]' ------------
       }
     },
     { immediate: true }
@@ -263,15 +286,22 @@
       }
     }
     if (info.file.status === 'done') {
+      let successFileList = [];
       if (info.file.response.success) {
-        fileListTemp = fileListTemp.map((file) => {
+        successFileList = fileListTemp.map((file) => {
           if (file.response) {
             let reUrl = file.response.message;
             file.url = getFileAccessHttpUrl(reUrl);
           }
           return file;
         });
+      }else{
+        successFileList = fileListTemp.filter(item=>{
+          return item.uid!=info.file.uid;
+        });
+        createMessage.error(`${info.file.name} 上传失败.`);
       }
+      fileListTemp = successFileList;
     } else if (info.file.status === 'error') {
       createMessage.error(`${info.file.name} 上传失败.`);
     }
@@ -291,11 +321,13 @@
               fileSize: item.size,
             };
             newFileList.push(fileJson);
-          } else {
+          }else{
             return;
           }
         }
-        emitValue(newFileList);
+        //update-begin---author:liusq ---date:20230914  for：[issues/5327]Upload组件returnUrl为false时上传的字段值返回了一个'[object Object]' ------------
+        emitValue(JSON.stringify(newFileList));
+        //update-end---author:liusq ---date:20230914  for：[issues/5327]Upload组件returnUrl为false时上传的字段值返回了一个'[object Object]' ------------
       }
     }
   }

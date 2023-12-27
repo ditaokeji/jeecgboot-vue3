@@ -65,7 +65,9 @@ export function useTableScroll(
     if (!tableEl) return;
 
     if (!bodyEl) {
-      bodyEl = tableEl.querySelector('.ant-table-body');
+      //update-begin-author:taoyan date:2023-2-11 for: issues/355 前端-jeecgboot-vue3 3.4.4版本,BasicTable高度自适应功能失效,设置BasicTable组件maxHeight失效; 原因已找到,请看详情
+      bodyEl = tableEl.querySelector('.ant-table-tbody');
+      //update-end-author:taoyan date:2023-2-11 for: issues/355 前端-jeecgboot-vue3 3.4.4版本,BasicTable高度自适应功能失效,设置BasicTable组件maxHeight失效; 原因已找到,请看详情
       if (!bodyEl) return;
     }
 
@@ -86,12 +88,12 @@ export function useTableScroll(
 
     bodyEl!.style.height = 'unset';
 
-    if (!unref(getCanResize) || tableData.length === 0) return;
+    if (!unref(getCanResize) || ( !tableData || tableData.length === 0)) return;
 
     await nextTick();
     //Add a delay to get the correct bottomIncludeBody paginationHeight footerHeight headerHeight
 
-    const headEl = tableEl.querySelector('.ant-table-thead ');
+    const headEl = tableEl.querySelector('.ant-table-thead');
 
     if (!headEl) return;
 
@@ -148,12 +150,16 @@ export function useTableScroll(
 
   const getScrollX = computed(() => {
     let width = 0;
-    if (unref(rowSelectionRef)) {
-      width += 60;
-    }
-
+    // update-begin--author:liaozhiyang---date:20230922---for：【QQYUN-6391】在线表单列表字段过多时,列头和数据对不齐
+    // if (unref(rowSelectionRef)) {
+    //   width += 60;
+    // }
+    // update-end--author:liaozhiyang---date:20230922---for：【QQYUN-6391】在线表单列表字段过多时,列头和数据对不齐
+    // update-begin--author:liaozhiyang---date:20230925---for：【issues/5411】BasicTable 配置maxColumnWidth 未生效
+    const { maxColumnWidth } = unref(propsRef);
     // TODO props ?? 0;
-    const NORMAL_WIDTH = 150;
+    const NORMAL_WIDTH = maxColumnWidth ?? 150;
+    // update-end--author:liaozhiyang---date:20230925---for：【issues/5411】BasicTable 配置maxColumnWidth 未生效
 
     const columns = unref(columnsRef).filter((item) => !item.defaultHidden);
     columns.forEach((item) => {

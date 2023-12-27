@@ -9,7 +9,6 @@ enum Api {
 /**
  * @description: Get user menu based on id
  */
-
 export const getMenuList = () => {
   return new Promise((resolve) => {
     //为了兼容mock和接口数据
